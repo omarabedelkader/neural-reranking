@@ -1,0 +1,33 @@
+# Pharo images, VM and caches of the benchmark directory (the results are kept)
+neural-bench/*.image
+neural-bench/*.changes
+neural-bench/*.sources
+neural-bench/pharo
+neural-bench/pharo-ui
+neural-bench/pharo-vm
+neural-bench/pharo-local/
+neural-bench/logs/
+neural-bench/projects/
+
+# changes file
+*.changes
+*.chg
+
+# system image
+*.image
+*.img7
+*.img
+
+# Pharo Smalltalk Debug log file
+PharoDebug.log
+
+# Monticello package cache
+/package-cache
+
+# playground cache
+/play-cache
+/play-stash
+
+# Metacello-github cache
+/github-cache
+github-*.zip

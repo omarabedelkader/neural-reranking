@@ -11,6 +11,8 @@
 #   scripts/run-neural-benchmarks.sh            # the full experiment (about one hour, see README)
 #   scripts/run-neural-benchmarks.sh --quick    # a small experiment (a few minutes), to try
 #   scripts/run-neural-benchmarks.sh --tests    # only run the SUnit tests
+#   scripts/run-neural-benchmarks.sh --overhead # only write again overhead.md / .tex (ms and MB the re-ranking
+#                                               # adds) from the results already in NR_OUTPUT
 #
 # Environment variables (see the README for the NR_* ones, given to CooNeuralExperiment>>#fromEnvironment):
 #   WORK_DIR         image, VM and results                       (default: ./neural-bench)
@@ -43,6 +45,7 @@ for argument in "$@"; do
   case "$argument" in
     --quick) export NR_QUICK=1 ;;
     --tests) MODE=tests ;;
+    --overhead) MODE=overhead ;;
     *) echo "Unknown option: $argument" >&2; exit 2 ;;
   esac
 done
@@ -105,7 +108,7 @@ EOF
   cp Pharo.image neural-tmp.image
   cp Pharo.changes neural-tmp.changes
   if ./pharo neural-tmp.image st --save --quit "$LOGS/install.st" > "$LOGS/install.log" 2>&1 \
-     && grep -q "finished to load" "$LOGS/install.log"; then
+     && grep -q "Loaded -> NeuralReranking-Tests" "$LOGS/install.log"; then
     mv neural-tmp.image neural-base.image
     mv neural-tmp.changes neural-base.changes
   else
@@ -131,6 +134,18 @@ EOF
   exit $?
 fi
 
+# Overhead report of results already there --------------------------------------------------------
+if [ "$MODE" = overhead ]; then
+  if [ ! -f "$NR_OUTPUT/results.ston" ]; then
+    echo "No results in $NR_OUTPUT (results.ston), run the experiment first" >&2
+    exit 1
+  fi
+  echo "CooNeuralOverheadReport writeIn: '$NR_OUTPUT'." > "$LOGS/overhead.st"
+  ./pharo neural-base.image st --quit "$LOGS/overhead.st"
+  cat "$NR_OUTPUT/overhead.md"
+  exit 0
+fi
+
 # 4. Experiment -------------------------------------------------------------------------------------
 cp neural-base.image run.image
 cp neural-base.changes run.changes
@@ -146,3 +161,7 @@ if [ ! -f "$NR_OUTPUT/summary.md" ]; then
 fi
 echo
 cat "$NR_OUTPUT/summary.md"
+if [ -f "$NR_OUTPUT/overhead.md" ]; then
+  echo
+  cat "$NR_OUTPUT/overhead.md"
+fi

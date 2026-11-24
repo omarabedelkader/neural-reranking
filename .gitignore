@@ -3,6 +3,7 @@ neural-bench/*.image
 neural-bench/*.changes
 neural-bench/*.sources
 neural-bench/pharo
+neural-bench-p15/
 neural-bench/pharo-ui
 neural-bench/pharo-vm
 neural-bench/pharo-local/

@@ -11,7 +11,8 @@ entirely to one of the three sets. Otherwise the test packages would be near cop
     split := CooNeuralPackageSplit train: #(...) validation: #(...) test: #(...).
 
 With #fromImageWithSeed:testPackageNames:, the groups of the given test packages are removed from the
-training and validation packages. The sizes of the three sets can be limited (#maxTrain: ...), the
+training and validation packages. The shares of the three sets are 70% / 15% / 15% unless #ratios: gives
+others (e.g. #(55 10 35)). The sizes of the three sets can be limited (#maxTrain: ...), the
 packages kept are drawn at random (with the seed).
 "
 Class {
@@ -21,7 +22,8 @@ Class {
 		'trainPackageNames',
 		'validationPackageNames',
 		'testPackageNames',
-		'seed'
+		'seed',
+		'ratios'
 	],
 	#category : 'NeuralReranking-Training',
 	#package : 'NeuralReranking-Training'
@@ -45,8 +47,17 @@ CooNeuralPackageSplit class >> fromImageWithSeed: aSeed [
 { #category : 'instance creation' }
 CooNeuralPackageSplit class >> fromImageWithSeed: aSeed testPackageNames: aCollectionOrNil [
 
-	^ self new
-		  seed: aSeed;
+	^ self fromImageWithSeed: aSeed testPackageNames: aCollectionOrNil ratios: nil
+]
+
+{ #category : 'instance creation' }
+CooNeuralPackageSplit class >> fromImageWithSeed: aSeed testPackageNames: aCollectionOrNil ratios: someSharesOrNil [
+	"someSharesOrNil: the shares of training, validation and test (e.g. #(55 10 35)), nil for 70 / 15 / 15."
+
+	| split |
+	split := self new seed: aSeed.
+	someSharesOrNil ifNotNil: [ split ratios: someSharesOrNil ].
+	^ split
 		  splitPackageNames: (self eligiblePackages collect: [ :package | package name asString ])
 		  testPackageNames: aCollectionOrNil;
 		  yourself
@@ -98,6 +109,7 @@ CooNeuralPackageSplit >> asDictionary [
 
 	^ Dictionary new
 		  at: #seed put: seed;
+		  at: #ratios put: self ratios;
 		  at: #train put: trainPackageNames;
 		  at: #validation put: validationPackageNames;
 		  at: #test put: testPackageNames;
@@ -141,6 +153,27 @@ CooNeuralPackageSplit >> packagesNamed: aCollection [
 ]
 
 { #category : 'accessing' }
+CooNeuralPackageSplit >> ratios [
+	"The shares of the packages for training, validation and test, summing to 1."
+
+	^ ratios ifNil: [ #( 0.70 0.15 0.15 ) ]
+]
+
+{ #category : 'accessing' }
+CooNeuralPackageSplit >> ratios: someShares [
+	"The shares of training, validation and test, in any unit (#(55 10 35) or #(0.55 0.1 0.35)).
+	Training and validation need a positive share; test may have none."
+
+	| total |
+	someShares size = 3 ifFalse: [ self error: 'Three shares are expected: training, validation and test' ].
+	(someShares anySatisfy: [ :each | each < 0 ]) ifTrue: [ self error: 'The shares cannot be negative' ].
+	(someShares first > 0 and: [ (someShares at: 2) > 0 ]) ifFalse: [
+		self error: 'The training and validation shares must be positive' ].
+	total := someShares inject: 0 into: [ :sum :each | sum + each ].
+	ratios := (someShares collect: [ :each | (each / total) asFloat ]) asArray
+]
+
+{ #category : 'accessing' }
 CooNeuralPackageSplit >> seed [
 
 	^ seed
@@ -163,10 +196,11 @@ CooNeuralPackageSplit >> setTrain: someTrainNames validation: someValidationName
 
 { #category : 'splitting' }
 CooNeuralPackageSplit >> splitPackageNames: aCollection testPackageNames: aTestCollectionOrNil [
-	"Split by groups: about 70% of the packages for training, 15% for validation, 15% for test.
-	When test packages are given, their groups are not used for training nor validation."
+	"Split by groups: about 70% of the packages for training, 15% for validation, 15% for test (or the
+	shares of #ratios:). When test packages are given, their groups are not used for training nor
+	validation, which share the packages in the proportions of their own shares."
 
-	| groups keys train validation test fixedTest ratios |
+	| groups keys train validation test fixedTest targets trainShare validationShare |
 	seed ifNil: [ seed := 42 ].
 	fixedTest := aTestCollectionOrNil ifNotNil: [ :names | (names collect: [ :each | each asString ]) asArray ].
 	groups := Dictionary new.
@@ -178,19 +212,27 @@ CooNeuralPackageSplit >> splitPackageNames: aCollection testPackageNames: aTestC
 	train := OrderedCollection new.
 	validation := OrderedCollection new.
 	test := OrderedCollection new.
-	ratios := fixedTest
-		          ifNil: [ {
-				          (train -> 0.70).
-				          (validation -> 0.15).
-				          (test -> 0.15) } ]
-		          ifNotNil: [ {
-				          (train -> 0.82).
-				          (validation -> 0.18) } ].
+	trainShare := self ratios first.
+	validationShare := self ratios at: 2.
+	targets := fixedTest
+		           ifNil: [ {
+				           (train -> trainShare).
+				           (validation -> validationShare).
+				           (test -> self ratios third) } ]
+		           ifNotNil: [
+			           ratios
+				           ifNil: [ "the shares used before #ratios: existed, kept so that the splits do not change"
+					           {
+						           (train -> 0.82).
+						           (validation -> 0.18) } ]
+				           ifNotNil: [ {
+						           (train -> (trainShare / (trainShare + validationShare))).
+						           (validation -> (validationShare / (trainShare + validationShare))) } ] ].
 	keys do: [ :key |
 		| total chosen |
 		total := train size + validation size + test size + 1.
 		"the set the most below its share"
-		chosen := (ratios detectMin: [ :association | association key size / total - association value ]) key.
+		chosen := (targets detectMin: [ :association | association key size / total - association value ]) key.
 		chosen addAll: (groups at: key) ].
 	self
 		setTrain: train

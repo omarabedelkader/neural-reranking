@@ -52,6 +52,24 @@ CooNeuralPackageSplitTest >> testOverlappingExplicitSplitIsRejected [
 ]
 
 { #category : 'tests' }
+CooNeuralPackageSplitTest >> testRatios [
+
+	| names split |
+	names := (1 to: 200) collect: [ :index | 'P' , index printString ].
+	split := CooNeuralPackageSplit new
+		         seed: 7;
+		         ratios: #( 50 10 40 );
+		         splitPackageNames: names testPackageNames: nil;
+		         yourself.
+	self assert: split ratios equals: #( 0.5 0.1 0.4 ).
+	self assert: (split trainPackageNames size - 100) abs <= 1.
+	self assert: (split validationPackageNames size - 20) abs <= 1.
+	self assert: (split testPackageNames size - 80) abs <= 1.
+	self should: [ CooNeuralPackageSplit new ratios: #( 50 50 ) ] raise: Error.
+	self should: [ CooNeuralPackageSplit new ratios: #( 90 0 10 ) ] raise: Error
+]
+
+{ #category : 'tests' }
 CooNeuralPackageSplitTest >> testSplitIsByProjectDisjointAndReproducible [
 
 	| split groups |

@@ -39,6 +39,7 @@ Tested on Pharo 14.
 scripts/run-neural-benchmarks.sh --quick   # a few minutes: to try the pipeline
 scripts/run-neural-benchmarks.sh           # the default experiment (about an hour)
 scripts/run-neural-benchmarks.sh --tests   # the SUnit tests only
+scripts/run-neural-benchmarks.sh --overhead  # write overhead.md / .tex again from the results in NR_OUTPUT
 ```
 
 The script downloads a Pharo 14 image and VM into `neural-bench/` (or copies the ones of `PHARO_DIR`), installs this
@@ -121,6 +122,14 @@ For each kind of completion and configuration (`summary.md`, `summary.csv`, `sum
   the benchmarks;
 - how often the expected token is in the pool (the best a re-ranker of the pool can do).
 
+`overhead.md` / `overhead.tex` (`CooNeuralOverheadReport`) put the cost of the re-ranking for the paper, for each
+kind and heuristics: the mean time of a completion without and with re-ranking and the extra milliseconds (mean,
+and median of the request-by-request differences), p95 without and with, the re-ranking step alone (mean / p95 /
+p99); and the RAM a re-ranker holds in MB (network, corpus statistics, index of the package being edited), the memory
+allocated in addition per completion, and the heap of the image. It only reads `results.ston` and
+`benchmark/requests-<kind>.csv`, so `--overhead` (or `CooNeuralOverheadReport writeIn: 'neural-bench/results'`)
+writes it for an experiment already run.
+
 The benchmarks are subclasses of `CooStaticBenchmarksMessage` and `CooStaticBenchmarksVariables`, so the usual reports
 of HeuristicCompletion-Benchmarks (accuracy, MRR, NDCG, time and memory tables, LaTeX, inspector) are there too:
 `results/benchmark/<kind>-<configuration>.txt`.
@@ -130,6 +139,7 @@ of HeuristicCompletion-Benchmarks (accuracy, MRR, NDCG, time and memory tables, 
 ```
 results/
   summary.md  summary.csv  summary.tex     all the tables
+  overhead.md  overhead.tex                what the re-ranking costs: extra ms per completion, MB held in RAM
   prefix-mrr.csv  packages.csv             MRR@10 per prefix size / per test package
   split.md  split.ston                     the packages of each set
   models/<kind>-<configuration>.ston       the 6 trained re-rankers
@@ -146,6 +156,7 @@ results/
 | `NR_QUICK` | 0 | 1: small experiment (8/3/3 packages, 25-30 call sites per package, 4 epochs) |
 | `NR_OUTPUT` | `neural-bench/results` | results directory |
 | `NR_SEED` | 42 | split, sampling, initialization, shuffling |
+| `NR_SPLIT` | `70,15,15` | shares of the projects for training, validation and test (any unit: `55,10,35` = `0.55,0.1,0.35`) |
 | `NR_TEST_PACKAGES` | | comma-separated test packages (their projects leave training and validation) |
 | `NR_TRAIN_PACKAGES`, `NR_VALIDATION_PACKAGES` | | explicit package lists |
 | `NR_MAX_TRAIN_PACKAGES`, `NR_MAX_VALIDATION_PACKAGES`, `NR_MAX_TEST_PACKAGES` | 40, 10, 15 | packages drawn from each set (0: all) |

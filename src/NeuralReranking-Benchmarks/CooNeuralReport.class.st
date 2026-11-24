@@ -5,6 +5,7 @@ I write the results of a CooNeuralExperiment in its output directory:
 - summary.md                            all the tables (accuracy, time, memory, costs, training);
 - summary.csv                           one line per kind of completion and configuration;
 - summary.tex                           LaTeX tables;
+- overhead.md, overhead.tex             the milliseconds and the MB the re-ranking adds (CooNeuralOverheadReport);
 - prefix-mrr.csv                        MRR@10 per prefix size;
 - packages.csv                          MRR@10 and mean time per test package;
 - training/<kind>-<configuration>.csv   the validation curves of the training;
@@ -88,7 +89,9 @@ CooNeuralReport >> writeAll [
 		writePackagesCsv;
 		writeLatex;
 		writeSton;
-		writeMarkdown
+		writeMarkdown.
+	"from the files just written (results.ston, benchmark/requests-<kind>.csv)"
+	CooNeuralOverheadReport writeIn: experiment outputDirectory
 ]
 
 { #category : 'writing' }

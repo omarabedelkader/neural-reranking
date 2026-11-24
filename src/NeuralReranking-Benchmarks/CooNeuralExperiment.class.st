@@ -32,6 +32,7 @@ Class {
 		'maxTrainPackages',
 		'maxValidationPackages',
 		'maxTestPackages',
+		'splitRatios',
 		'kinds',
 		'baseNames',
 		'poolSize',
@@ -87,6 +88,8 @@ CooNeuralExperiment class >> fromEnvironment [
 	(list value: 'NR_VALIDATION_PACKAGES') ifNotNil: [ :names | experiment validationPackageNames: names ].
 	(list value: 'NR_KINDS') ifNotNil: [ :names | experiment kinds: (names collect: [ :each | each asSymbol ]) ].
 	(list value: 'NR_CONFIGURATIONS') ifNotNil: [ :names | experiment baseNames: (names collect: [ :each | each asSymbol ]) ].
+	(list value: 'NR_SPLIT') ifNotNil: [ :shares |
+		experiment splitRatios: (shares collect: [ :each | each asNumber ]) ].
 	number value: 'NR_SEED' value: #seed:.
 	number value: 'NR_MAX_TRAIN_PACKAGES' value: #maxTrainPackages:.
 	number value: 'NR_MAX_VALIDATION_PACKAGES' value: #maxValidationPackages:.
@@ -403,6 +406,13 @@ CooNeuralExperiment >> runners [
 ]
 
 { #category : 'accessing' }
+CooNeuralExperiment >> splitRatios: someShares [
+	"The shares of the packages for training, validation and test, e.g. #(55 10 35) (default 70 / 15 / 15)."
+
+	splitRatios := someShares
+]
+
+{ #category : 'accessing' }
 CooNeuralExperiment >> seed [
 
 	^ seed
@@ -425,6 +435,7 @@ CooNeuralExperiment >> settings [
 		  at: #maxTrainPackages put: maxTrainPackages;
 		  at: #maxValidationPackages put: maxValidationPackages;
 		  at: #maxTestPackages put: maxTestPackages;
+		  at: #splitRatios put: self split ratios;
 		  at: #trainCallsitesPerPackage put: trainCallsites;
 		  at: #validationCallsitesPerPackage put: validationCallsites;
 		  at: #testCallsitesPerPackage put: testCallsites;
@@ -449,7 +460,11 @@ CooNeuralExperiment >> split [
 					           train: trainPackageNames
 					           validation: (validationPackageNames ifNil: [ #(  ) ])
 					           test: (testPackageNames ifNil: [ #(  ) ]) ]
-			           ifNil: [ CooNeuralPackageSplit fromImageWithSeed: seed testPackageNames: testPackageNames ].
+			           ifNil: [
+				           CooNeuralPackageSplit
+					           fromImageWithSeed: seed
+					           testPackageNames: testPackageNames
+					           ratios: splitRatios ].
 		  split seed: seed.
 		  "the package lists given explicitly are kept as they are"
 		  split

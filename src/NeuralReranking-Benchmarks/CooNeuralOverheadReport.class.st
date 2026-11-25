@@ -360,7 +360,7 @@ CooNeuralOverheadReport >> writeLatex: someOverheads on: aStream [
 		nextPutAll: '\hline';
 		lf;
 		nextPutAll:
-			'Kind & Heuristics & Parameters & Network & Corpus statistics & Package index & Held in RAM & Allocated per completion & Indexing (ms) \\';
+			'Kind & Heuristics & Parameters & Network & Corpus stat. & Package index & Held in RAM & Alloc./completion & Indexing (ms) \\';
 		lf;
 		nextPutAll: '\hline';
 		lf.
